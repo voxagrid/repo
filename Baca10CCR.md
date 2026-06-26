@@ -113,3 +113,40 @@ if __name__ == "__main__":
 -----------------
 
 root@iZk1a97e9ds4gttbeur6suZ:~# watch -d -n1 'fs_cli -x "show channels"'
+
+
+-------------------
+
+
+  1. Cara Cek Apakah Modul Sudah di-Load atau Belum
+  Untuk memastikan apakah sebuah modul sudah aktif/di-load, Anda bisa menggunakan perintah  module_exists .
+
+  • Untuk  mod_audio_stream :
+    fs_cli -x "module_exists mod_audio_stream"
+
+  • Untuk  mod_lua :
+    fs_cli -x "module_exists mod_lua"
+
+
+  (Jika modul sudah di-load, hasilnya akan mengembalikan nilai  true . Jika belum, hasilnya  false ).
+
+  (Alternatif: Anda juga bisa melihat keseluruhan list dengan mengetikkan  fs_cli -x "show modules" | grep mod_audio_stream )
+  ──────
+  2. Cara Cek Versi  mod_audio_stream
+  Karena modul ini dikompilasi manual dari source code, versi pastinya tidak dicatat oleh sistem FreeSWITCH ke dalam memori. Cara paling akurat untuk mengecek versi modul yang sedang
+  terpasang adalah dengan melihat rilis / tag dari Git repositori asalnya:
+
+    cd /usr/src/mod_audio_stream
+    git describe --tags
+
+  (Contoh outputnya  v1.0.3  yang menandakan Anda menggunakan versi 1.0.3).
+  ──────
+  3. Cara Cek Versi Lua yang Digunakan oleh  mod_lua
+  Anda dapat memerintahkan  mod_lua  untuk mengeksekusi sebaris perintah (satu baris skrip) yang mencetak informasi versinya langsung dari mesin Lua internal FreeSWITCH.
+
+  Jalankan perintah ini:
+
+    fs_cli -x "lua ~stream:write(_VERSION .. '\n')"
+
+  (Di server Anda saat ini, perintah ini akan menghasilkan output Lua 5.3, yang berarti  mod_lua  Anda menggunakan interpreter Lua versi 5.3).
+
