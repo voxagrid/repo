@@ -27,3 +27,89 @@
 
 
 ```
+
+
+```
+
+
+ 1. Skrip akan membuat 20 panggilan latar belakang yang akan berstatus aktif (menunggu).
+  2. Skrip mengambil 20  uuid  tersebut dan menjalankan fungsi API  uuid_audio_stream  ke setiap channel agar mulai mengirim audio ke  ws://127.0.0.1:8080 .
+
+  Silakan coba jalankan lagi sekarang!
+  Terminal 1:
+
+    python3 /usr/src/mod_audio_stream/test_ws_server.py
+
+  Terminal 2:
+
+    /usr/src/mod_audio_stream/test_calls.sh
+
+  Kali ini, Anda pasti akan melihat Terminal 1 dibanjiri log masuk (dari Stream 1 hingga 20) secara bersamaan!
+────────────────────────────────────────────────────────────
+
+
+root@fsivr:/usr/src/mod_audio_stream# cat /usr/src/mod_audio_stream/test_calls.sh
+#!/bin/bash
+
+# Pastikan module sudah diload
+fs_cli -x "load mod_audio_stream" > /dev/null
+
+echo "1. Membuat 20 panggilan latar belakang agar tetap aktif (menggunakan loopback)..."
+for i in {1..20}; do
+    # Buat channel yang diam/aktif secara latar belakang (menjalankan routing default)
+    fs_cli -x "bgapi originate loopback/1111/default inline:park" > /dev/null
+    sleep 0.1
+done
+
+# Tunggu sejenak agar semua channel siap
+sleep 2
+
+echo "2. Menyambungkan 20 channel aktif tersebut ke WebSocket (mod_audio_stream)..."
+# Ambil 20 UUID dari channel yang baru dibuat
+UUIDS=$(fs_cli -x "show channels" | grep "loopback" | awk -F',' '{print $1}' | head -n 20)
+
+count=0
+for uuid in $UUIDS; do
+    # Parameter API yang benar: uuid_audio_stream <uuid> start <wss-url> <mix-type> <sampling-rate>
+    fs_cli -x "uuid_audio_stream $uuid start ws://127.0.0.1:8080 mono 8000" > /dev/null
+    sleep 0.1
+    count=$((count+1))
+done
+
+echo "Selesai! $count stream telah di-trigger. Silakan cek layar Python WebSocket Server Anda."
+
+---------------------
+
+root@fsivr:/usr/src/mod_audio_stream# cat /usr/src/mod_audio_stream/test_ws_server.py
+import asyncio
+import websockets
+import time
+
+active_connections = set()
+
+async def handler(websocket, path):
+    active_connections.add(websocket)
+    print(f"[{time.strftime('%X')}] NEW Connection. Total active streams: {len(active_connections)}")
+    try:
+        async for message in websocket:
+            # We just receive and drop the audio payload here for testing
+            pass
+    except websockets.exceptions.ConnectionClosed:
+        pass
+    finally:
+        active_connections.remove(websocket)
+        print(f"[{time.strftime('%X')}] Connection closed. Total active streams: {len(active_connections)}")
+
+async def main():
+    print("Starting WebSocket Server on ws://127.0.0.1:8080 ...")
+    print("Waiting for FreeSWITCH mod_audio_stream connections...")
+    async with websockets.serve(handler, "127.0.0.1", 8080):
+        await asyncio.Future()  # run forever
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+-----------------
+
+root@iZk1a97e9ds4gttbeur6suZ:~# watch -d -n1 'fs_cli -x "show channels"'
