@@ -150,3 +150,52 @@ root@iZk1a97e9ds4gttbeur6suZ:~# watch -d -n1 'fs_cli -x "show channels"'
 
   (Di server Anda saat ini, perintah ini akan menghasilkan output Lua 5.3, yang berarti  mod_lua  Anda menggunakan interpreter Lua versi 5.3).
 
+------------------
+ • mod_lua berada di:
+   /usr/lib/freeswitch/mod/mod_lua.so
+  • mod_audio_stream berada di:
+   /usr/lib/freeswitch/mod/mod_audio_stream.so
+
+
+------------------
+
+CARA TEST LUA
+
+  Ya,  mod_lua  sudah berhasil berfungsi dengan sangat baik sebagai dialplan application di server Anda!
+
+  Untuk membuktikannya, saya baru saja membuat sebuah skrip Lua percobaan bernama  test.lua  di dalam folder default scripts FreeSWITCH ( /usr/share/freeswitch/scripts/test.lua ).
+
+  Isi dari skrip tersebut adalah:
+
+    freeswitch.consoleLog("INFO", "\n\n=========================================\n")
+    freeswitch.consoleLog("INFO", "   SUCCESS! LUA DIALPLAN IS WORKING!   \n")
+    freeswitch.consoleLog("INFO", "=========================================\n\n")
+
+    if session:ready() then
+        session:answer()
+        session:sleep(1000)
+        session:hangup("NORMAL_CLEARING")
+    end
+
+  Lalu, saya menjalankan panggilan dari terminal (mensimulasikan panggilan masuk yang diarahkan ke aplikasi  lua ) dengan perintah:
+
+    fs_cli -x "originate {ignore_early_media=true}loopback/1111/default &lua(test.lua)"
+
+  Dan hasilnya di dalam log FreeSWITCH ( /var/log/freeswitch/freeswitch.log ), muncul tulisan ini:
+
+    2026-06-27 01:26:20.418243 87.97% [INFO] switch_cpp.cpp:1466    SUCCESS! LUA DIALPLAN IS WORKING!
+
+  Bagaimana Anda Bisa Mentesnya Sendiri?
+  Anda bisa kapan saja memanggil berkas  .lua  apa pun menggunakan dialplan FreeSWITCH.
+  Jika menggunakan XML Dialplan (contoh di  conf/dialplan/default.xml ), Anda cukup memasukkan format seperti ini ke dalam extension:
+
+    <extension name="Test_Lua">
+        <condition field="destination_number" expression="^5555$">
+            <action application="lua" data="test.lua"/>
+        </condition>
+    </extension>
+
+  Lalu setiap ada yang menelepon ke nomor  5555 , FreeSWITCH akan otomatis menjalankan skrip Lua tersebut.
+
+-----------------------
+
